@@ -120,7 +120,7 @@ func NewFileLogger(file string) *BeeLogger {
 	}
 	l.SetLogger("file", fmt.Sprintf(`{"filename":"%s","maxdays":7}`, file))
 	l.EnableFuncCallDepth(true)
-	l.SetLogFuncCallDepth(2)
+	l.SetLogFuncCallDepth(3)
 	return l
 }
 
@@ -248,6 +248,9 @@ func (bl *BeeLogger) log(tp string, level int, v ...interface{}) {
 }
 
 func (bl *BeeLogger) Pretty(v interface{}, message string) {
+	bl.pretty(v, message)
+}
+func (bl *BeeLogger) pretty(v interface{}, message string) {
 	b, _ := json.MarshalIndent(v, " ", "  ")
 	if message == "" {
 		message = reflect.TypeOf(v).String()
