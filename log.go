@@ -82,9 +82,9 @@ func Register(name string, log loggerType) {
 	adapters[name] = log
 }
 
-// BeeLogger is default logger in beego application.
+// Logger is default logger in beego application.
 // it can contain several providers and log message into all providers.
-type BeeLogger struct {
+type Logger struct {
 	lock                sync.Mutex
 	level               int
 	enableFuncCallDepth bool
@@ -98,13 +98,14 @@ type logMsg struct {
 	msg   string
 }
 
-// NewLogger returns a new BeeLogger.
+// NewLogger returns a new Logger.
 // channellen means the number of messages in chan.
 // if the buffering chan is full, logger adapters write to file or other way.
-func NewLogger(channellen int64) *BeeLogger {
-	bl := new(BeeLogger)
+func NewLogger(channellen int64) *Logger {
+	bl := new(Logger)
 	bl.level = LevelDebug
 	bl.loggerFuncCallDepth = 2
+	bl.EnableFuncCallDepth(true)
 	bl.msg = make(chan *logMsg, channellen)
 	bl.outputs = make(map[string]LoggerInterface)
 	bl.SetLogger("console", "") // default output to console
@@ -112,7 +113,7 @@ func NewLogger(channellen int64) *BeeLogger {
 	return bl
 }
 
-func NewFileLogger(file string) *BeeLogger {
+func NewFileLogger(file string) *Logger {
 	l := NewLogger(1024)
 	path := strings.Split(file, "/")
 	if len(path) > 1 {
@@ -124,9 +125,9 @@ func NewFileLogger(file string) *BeeLogger {
 	return l
 }
 
-// SetLogger provides a given logger adapter into BeeLogger with config string.
+// SetLogger provides a given logger adapter into Logger with config string.
 // config need to be correct JSON as string: {"interval":360}.
-func (bl *BeeLogger) SetLogger(adaptername string, config string) error {
+func (bl *Logger) SetLogger(adaptername string, config string) error {
 	bl.lock.Lock()
 	defer bl.lock.Unlock()
 	if log, ok := adapters[adaptername]; ok {
@@ -134,7 +135,7 @@ func (bl *BeeLogger) SetLogger(adaptername string, config string) error {
 		err := lg.Init(config)
 		bl.outputs[adaptername] = lg
 		if err != nil {
-			fmt.Println("logs.BeeLogger.SetLogger: " + err.Error())
+			fmt.Println("logs.Logger.SetLogger: " + err.Error())
 			return err
 		}
 	} else {
@@ -143,8 +144,8 @@ func (bl *BeeLogger) SetLogger(adaptername string, config string) error {
 	return nil
 }
 
-// remove a logger adapter in BeeLogger.
-func (bl *BeeLogger) DelLogger(adaptername string) error {
+// remove a logger adapter in Logger.
+func (bl *Logger) DelLogger(adaptername string) error {
 	bl.lock.Lock()
 	defer bl.lock.Unlock()
 	if lg, ok := bl.outputs[adaptername]; ok {
@@ -156,7 +157,7 @@ func (bl *BeeLogger) DelLogger(adaptername string) error {
 	}
 }
 
-func (bl *BeeLogger) writerMsg(loglevel int, msg string) error {
+func (bl *Logger) writerMsg(loglevel int, msg string) error {
 	if loglevel > bl.level {
 		return nil
 	}
@@ -181,23 +182,23 @@ func (bl *BeeLogger) writerMsg(loglevel int, msg string) error {
 //
 // If message level (such as LevelDebug) is higher than logger level (such as LevelWarning),
 // log providers will not even be sent the message.
-func (bl *BeeLogger) SetLevel(l int) {
+func (bl *Logger) SetLevel(l int) {
 	bl.level = l
 }
 
 // set log funcCallDepth
-func (bl *BeeLogger) SetLogFuncCallDepth(d int) {
+func (bl *Logger) SetLogFuncCallDepth(d int) {
 	bl.loggerFuncCallDepth = d
 }
 
 // enable log funcCallDepth
-func (bl *BeeLogger) EnableFuncCallDepth(b bool) {
+func (bl *Logger) EnableFuncCallDepth(b bool) {
 	bl.enableFuncCallDepth = b
 }
 
 // start logger chan reading.
 // when chan is not empty, write logs.
-func (bl *BeeLogger) startLogger() {
+func (bl *Logger) startLogger() {
 	for {
 		select {
 		case bm := <-bl.msg:
@@ -212,45 +213,54 @@ func (bl *BeeLogger) startLogger() {
 }
 
 // Log ERROR level message.
-func (bl *BeeLogger) Error(v ...interface{}) {
+func (bl *Logger) Error(v ...interface{}) {
 	bl.log("Error", LevelError, v)
 }
 
 // Log WARNING level message.
-func (bl *BeeLogger) Warn(v ...interface{}) {
+func (bl *Logger) Warn(v ...interface{}) {
 	bl.log("Warn", LevelWarn, v)
 }
 
 // Log INFORMATIONAL level message.
-func (bl *BeeLogger) Info(v ...interface{}) {
+func (bl *Logger) Info(v ...interface{}) {
 	bl.log("Info", LevelInfo, v)
 }
 
 // Log DEBUG level message.
-func (bl *BeeLogger) Debug(v ...interface{}) {
+func (bl *Logger) Debug(v ...interface{}) {
 	bl.log("Debug", LevelDebug, v)
 }
 
-func (bl *BeeLogger) log(tp string, level int, v ...interface{}) {
+func (bl *Logger) log(tp string, level int, v ...interface{}) {
 	msg := fmt.Sprintf("["+tp+"] "+generateFmtStr(len(v)), v...)
-	for _, item := range v {
-		if items, ok := item.([]interface{}); ok {
-			if len(items) > 0 {
-				item = items[0]
-			}
-		}
-		stack := handleError(item)
-		if stack != "" {
-			msg = msg + "\n" + stack
-		}
+
+	stack := handleError(rotate(v))
+	if stack != "" {
+		msg = msg + "\n" + stack
 	}
 	bl.writerMsg(level, msg)
 }
 
-func (bl *BeeLogger) Pretty(v interface{}, message string) {
+//simple and strong, niu b !
+func rotate(item interface{}) interface{} {
+	if items, ok := item.([]interface{}); ok {
+		if len(items) > 0 {
+			for _, v := range items {
+				item = rotate(v)
+				if errcode, ok := item.(errors.ErrCode); ok {
+					return errcode
+				}
+			}
+		}
+	}
+	return item
+}
+
+func (bl *Logger) Pretty(v interface{}, message string) {
 	bl.pretty(v, message)
 }
-func (bl *BeeLogger) pretty(v interface{}, message string) {
+func (bl *Logger) pretty(v interface{}, message string) {
 	b, _ := json.MarshalIndent(v, " ", "  ")
 	if message == "" {
 		message = reflect.TypeOf(v).String()
@@ -259,14 +269,14 @@ func (bl *BeeLogger) pretty(v interface{}, message string) {
 }
 
 // flush all chan data.
-func (bl *BeeLogger) Flush() {
+func (bl *Logger) Flush() {
 	for _, l := range bl.outputs {
 		l.Flush()
 	}
 }
 
-// close logger, flush all chan data and destroy all adapters in BeeLogger.
-func (bl *BeeLogger) Close() {
+// close logger, flush all chan data and destroy all adapters in Logger.
+func (bl *Logger) Close() {
 	for {
 		if len(bl.msg) > 0 {
 			bm := <-bl.msg
