@@ -245,12 +245,9 @@ func (bl *Logger) log(tp string, level int, v ...interface{}) {
 //simple and strong, niu b !
 func rotate(item interface{}) interface{} {
 	if items, ok := item.([]interface{}); ok {
-		if len(items) > 0 {
-			for _, v := range items {
-				item = rotate(v)
-				if errcode, ok := item.(errors.ErrCode); ok {
-					return errcode
-				}
+		for _, item = range items {
+			if errcode, ok := rotate(item).(errors.ErrCode); ok {
+				return errcode
 			}
 		}
 	}
