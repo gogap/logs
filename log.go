@@ -107,7 +107,7 @@ func NewLogger(channellen int64) *BeeLogger {
 	bl.loggerFuncCallDepth = 2
 	bl.msg = make(chan *logMsg, channellen)
 	bl.outputs = make(map[string]LoggerInterface)
-	//bl.SetLogger("console", "") // default output to console
+	bl.SetLogger("console", "") // default output to console
 	go bl.startLogger()
 	return bl
 }
@@ -118,7 +118,6 @@ func NewFileLogger(file string) *BeeLogger {
 	if len(path) > 1 {
 		exec.Command("mkdir", path[0]).Run()
 	}
-	l.SetLogger("console", "")
 	l.SetLogger("file", fmt.Sprintf(`{"filename":"%s","maxdays":7}`, file))
 	l.EnableFuncCallDepth(true)
 	l.SetLogFuncCallDepth(2)
