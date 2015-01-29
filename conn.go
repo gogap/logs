@@ -36,7 +36,7 @@ type ConnWriter struct {
 // create new ConnWrite returning as LoggerInterface.
 func NewConn() LoggerInterface {
 	conn := new(ConnWriter)
-	conn.Level = LevelTrace
+	conn.Level = LevelInfo
 	return conn
 }
 

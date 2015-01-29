@@ -84,7 +84,7 @@ func NewFileWriter() LoggerInterface {
 		Daily:    true,
 		Maxdays:  7,
 		Rotate:   true,
-		Level:    LevelTrace,
+		Level:    LevelInfo,
 	}
 	// use MuxWriter instead direct use os.File for lock write when rotate
 	w.mw = new(MuxWriter)
