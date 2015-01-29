@@ -33,10 +33,15 @@
 package logs
 
 import (
+	"encoding/json"
 	"fmt"
+	"os/exec"
 	"path"
 	"runtime"
+	"strings"
 	"sync"
+
+	"github.com/gogap/errors"
 )
 
 // RFC5424 log message levels.
@@ -113,6 +118,19 @@ func NewLogger(channellen int64) *BeeLogger {
 	//bl.SetLogger("console", "") // default output to console
 	go bl.startLogger()
 	return bl
+}
+
+func NewFileLogger(file string) *BeeLogger {
+	l := NewLogger(1024)
+	path := strings.Split(file, "/")
+	if len(path) > 1 {
+		exec.Command("mkdir", path[0]).Run()
+	}
+	l.SetLogger("console", "")
+	l.SetLogger("file", fmt.Sprintf(`{"filename":"%s","maxdays":3}`, file))
+	l.EnableFuncCallDepth(true)
+	l.SetLogFuncCallDepth(2)
+	return l
 }
 
 // SetLogger provides a given logger adapter into BeeLogger with config string.
@@ -202,73 +220,45 @@ func (bl *BeeLogger) startLogger() {
 	}
 }
 
-// Log EMERGENCY level message.
-func (bl *BeeLogger) Emergency(format string, v ...interface{}) {
-	msg := fmt.Sprintf("[M] "+format, v...)
-	bl.writerMsg(LevelEmergency, msg)
-}
-
-// Log ALERT level message.
-func (bl *BeeLogger) Alert(format string, v ...interface{}) {
-	msg := fmt.Sprintf("[A] "+format, v...)
-	bl.writerMsg(LevelAlert, msg)
-}
-
-// Log CRITICAL level message.
-func (bl *BeeLogger) Critical(format string, v ...interface{}) {
-	msg := fmt.Sprintf("[C] "+format, v...)
-	bl.writerMsg(LevelCritical, msg)
-}
-
 // Log ERROR level message.
-func (bl *BeeLogger) Error(format string, v ...interface{}) {
-	msg := fmt.Sprintf("[E] "+format, v...)
-	bl.writerMsg(LevelError, msg)
+func (bl *BeeLogger) Error(v ...interface{}) {
+	bl.log("Error", v)
 }
 
 // Log WARNING level message.
-func (bl *BeeLogger) Warning(format string, v ...interface{}) {
-	msg := fmt.Sprintf("[W] "+format, v...)
-	bl.writerMsg(LevelWarning, msg)
-}
-
-// Log NOTICE level message.
-func (bl *BeeLogger) Notice(format string, v ...interface{}) {
-	msg := fmt.Sprintf("[N] "+format, v...)
-	bl.writerMsg(LevelNotice, msg)
+func (bl *BeeLogger) Warn(v ...interface{}) {
+	bl.log("Warn", v)
 }
 
 // Log INFORMATIONAL level message.
-func (bl *BeeLogger) Informational(format string, v ...interface{}) {
-	msg := fmt.Sprintf("[I] "+format, v...)
-	bl.writerMsg(LevelInformational, msg)
+func (bl *BeeLogger) Info(v ...interface{}) {
+	bl.log("Info", v)
 }
 
 // Log DEBUG level message.
-func (bl *BeeLogger) Debug(format string, v ...interface{}) {
-	msg := fmt.Sprintf("[D] "+format, v...)
+func (bl *BeeLogger) Debug(v ...interface{}) {
+	bl.log("Debug", v)
+}
+
+func (bl *BeeLogger) log(tp string, v ...interface{}) {
+	msg := fmt.Sprintf("["+tp+"] "+generateFmtStr(len(v)), v...)
+	for _, item := range v {
+		if items, ok := item.([]interface{}); ok {
+			if len(items) > 0 {
+				item = items[0]
+			}
+		}
+		stack := handleError(item)
+		if stack != "" {
+			msg = msg + "\n" + stack
+		}
+	}
 	bl.writerMsg(LevelDebug, msg)
 }
 
-// Log WARN level message.
-//
-// Deprecated: compatibility alias for Warning(), Will be removed in 1.5.0.
-func (bl *BeeLogger) Warn(format string, v ...interface{}) {
-	bl.Warning(format, v...)
-}
-
-// Log INFO level message.
-//
-// Deprecated: compatibility alias for Informational(), Will be removed in 1.5.0.
-func (bl *BeeLogger) Info(format string, v ...interface{}) {
-	bl.Informational(format, v...)
-}
-
-// Log TRACE level message.
-//
-// Deprecated: compatibility alias for Debug(), Will be removed in 1.5.0.
-func (bl *BeeLogger) Trace(format string, v ...interface{}) {
-	bl.Debug(format, v...)
+func (bl *BeeLogger) Pretty(v interface{}) {
+	b, _ := json.MarshalIndent(v, " ", "  ")
+	bl.writerMsg(LevelDebug, "[Pretty]\n"+string(b))
 }
 
 // flush all chan data.
@@ -297,4 +287,15 @@ func (bl *BeeLogger) Close() {
 		l.Flush()
 		l.Destroy()
 	}
+}
+
+func generateFmtStr(n int) string {
+	return strings.Repeat("%v ", n)
+}
+
+func handleError(v interface{}) (msg string) {
+	if err, ok := v.(errors.ErrCode); ok {
+		msg = msg + err.StackTrace()
+	}
+	return
 }
