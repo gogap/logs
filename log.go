@@ -37,6 +37,7 @@ import (
 	"fmt"
 	"os/exec"
 	"path"
+	"reflect"
 	"runtime"
 	"strings"
 	"sync"
@@ -247,9 +248,12 @@ func (bl *BeeLogger) log(tp string, level int, v ...interface{}) {
 	bl.writerMsg(level, msg)
 }
 
-func (bl *BeeLogger) Pretty(v interface{}) {
+func (bl *BeeLogger) Pretty(v interface{}, message string) {
 	b, _ := json.MarshalIndent(v, " ", "  ")
-	bl.writerMsg(LevelDebug, "[Pretty]\n"+string(b))
+	if message == "" {
+		message = reflect.TypeOf(v).String()
+	}
+	bl.writerMsg(LevelDebug, fmt.Sprintf("[Pretty]\n%s\n%s", message, string(b)))
 }
 
 // flush all chan data.
