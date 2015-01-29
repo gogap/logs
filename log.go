@@ -295,7 +295,11 @@ func generateFmtStr(n int) string {
 
 func handleError(v interface{}) (msg string) {
 	if err, ok := v.(errors.ErrCode); ok {
-		msg = msg + err.StackTrace()
+		var ctx string
+		if err.Context() != nil {
+			ctx = "CONTEXT\n %s\n"
+		}
+		msg = msg + fmt.Sprintf("%sSTACK\n %s\n", ctx, err.Context().String(), err.StackTrace())
 	}
 	return
 }
