@@ -41,7 +41,7 @@ type SmtpWriter struct {
 
 // create smtp writer.
 func NewSmtpWriter() LoggerInterface {
-	return &SmtpWriter{Level: LevelTrace}
+	return &SmtpWriter{Level: LevelInfo}
 }
 
 // init smtp writer with json config.

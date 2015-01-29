@@ -46,24 +46,15 @@ import (
 
 // RFC5424 log message levels.
 const (
-	LevelEmergency = iota
-	LevelAlert
-	LevelCritical
-	LevelError
-	LevelWarning
-	LevelNotice
-	LevelInformational
+	LevelError = iota
+	LevelWarn
+	LevelInfo
 	LevelDebug
 )
 
 // Legacy loglevel constants to ensure backwards compatibility.
 //
 // Deprecated: will be removed in 1.5.0.
-const (
-	LevelInfo  = LevelInformational
-	LevelTrace = LevelDebug
-	LevelWarn  = LevelWarning
-)
 
 type loggerType func() LoggerInterface
 
@@ -127,7 +118,7 @@ func NewFileLogger(file string) *BeeLogger {
 		exec.Command("mkdir", path[0]).Run()
 	}
 	l.SetLogger("console", "")
-	l.SetLogger("file", fmt.Sprintf(`{"filename":"%s","maxdays":3}`, file))
+	l.SetLogger("file", fmt.Sprintf(`{"filename":"%s","maxdays":7}`, file))
 	l.EnableFuncCallDepth(true)
 	l.SetLogFuncCallDepth(2)
 	return l
@@ -222,25 +213,25 @@ func (bl *BeeLogger) startLogger() {
 
 // Log ERROR level message.
 func (bl *BeeLogger) Error(v ...interface{}) {
-	bl.log("Error", v)
+	bl.log("Error", LevelError, v)
 }
 
 // Log WARNING level message.
 func (bl *BeeLogger) Warn(v ...interface{}) {
-	bl.log("Warn", v)
+	bl.log("Warn", LevelWarn, v)
 }
 
 // Log INFORMATIONAL level message.
 func (bl *BeeLogger) Info(v ...interface{}) {
-	bl.log("Info", v)
+	bl.log("Info", LevelInfo, v)
 }
 
 // Log DEBUG level message.
 func (bl *BeeLogger) Debug(v ...interface{}) {
-	bl.log("Debug", v)
+	bl.log("Debug", LevelDebug, v)
 }
 
-func (bl *BeeLogger) log(tp string, v ...interface{}) {
+func (bl *BeeLogger) log(tp string, level int, v ...interface{}) {
 	msg := fmt.Sprintf("["+tp+"] "+generateFmtStr(len(v)), v...)
 	for _, item := range v {
 		if items, ok := item.([]interface{}); ok {
@@ -253,7 +244,7 @@ func (bl *BeeLogger) log(tp string, v ...interface{}) {
 			msg = msg + "\n" + stack
 		}
 	}
-	bl.writerMsg(LevelDebug, msg)
+	bl.writerMsg(level, msg)
 }
 
 func (bl *BeeLogger) Pretty(v interface{}) {
