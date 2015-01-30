@@ -37,3 +37,6 @@ func Debug(v ...interface{}) {
 func Pretty(v interface{}, message string) {
 	logger.Pretty(v, message)
 }
+func SetLoggerLevel(l int) {
+	logger.SetLevel(l)
+}
