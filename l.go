@@ -34,6 +34,6 @@ func Info(v ...interface{}) {
 func Debug(v ...interface{}) {
 	logger.Debug(v...)
 }
-func Pretty(v interface{}, message string) {
-	logger.Pretty(v, message)
+func Pretty(message string, v interface{}) {
+	logger.Pretty(message, v)
 }

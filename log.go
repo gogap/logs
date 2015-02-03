@@ -254,10 +254,10 @@ func rotate(item interface{}) interface{} {
 	return item
 }
 
-func (bl *Logger) Pretty(v interface{}, message string) {
-	bl.pretty(v, message)
+func (bl *Logger) Pretty(message string, v interface{}) {
+	bl.pretty(message, v)
 }
-func (bl *Logger) pretty(v interface{}, message string) {
+func (bl *Logger) pretty(message string, v interface{}) {
 	b, _ := json.MarshalIndent(v, " ", "  ")
 	if message == "" {
 		message = reflect.TypeOf(v).String()
