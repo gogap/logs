@@ -11,7 +11,7 @@ func init() {
 // set file logger with json config.
 // jsonconfig like:
 //	{
-//	"filename":"logs/beego.log",
+//	"filename":"logs/sample.log",
 //	"maxlines":10000,
 //	"maxsize":1<<30,
 //	"daily":true,
@@ -36,4 +36,7 @@ func Debug(v ...interface{}) {
 }
 func Pretty(message string, v interface{}) {
 	logger.Pretty(message, v)
+}
+func SetLoggerLevel(l int) {
+	logger.SetLevel(l)
 }

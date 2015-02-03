@@ -58,6 +58,6 @@ Configure like this:
 Configure like this:
 
 	log := NewLogger(10000)
-	log.SetLogger("smtp", `{"username":"beegotest@gmail.com","password":"xxxxxxxx","host":"smtp.gmail.com:587","sendTos":["xiemengjun@gmail.com"]}`)
+	log.SetLogger("smtp", `{"username":"sample1@mail.host","password":"xxxxxxxx","host":"smtp.mail.host:port","sendTos":["sample2@mail.host"]}`)
 	log.Critical("sendmail critical")
 	time.Sleep(time.Second * 30)
