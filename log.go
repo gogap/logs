@@ -121,7 +121,7 @@ func NewFileLogger(file string) *Logger {
 	}
 	l.SetLogger("file", fmt.Sprintf(`{"filename":"%s","maxdays":7}`, file))
 	l.EnableFuncCallDepth(true)
-	l.SetLogFuncCallDepth(3)
+	l.SetLogFuncCallDepth(4)
 	return l
 }
 
